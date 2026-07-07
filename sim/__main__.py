@@ -11,6 +11,7 @@ import argparse
 import sys
 
 from sim.engine import TickLimitExceededError, run
+from sim.model import ServerVariety
 from sim.scenarios import minimal_scenario
 from sim.strategies import AllCloud, EdgeFirst, LeastLoaded, PlacementStrategy
 
@@ -66,8 +67,17 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {error}", file=sys.stderr)
         return 1
 
+    split = monitor.split
     print(f"scenario: minimal | strategy: {display_name}")
     print(f"mean response time: {monitor.mean_response_time:.2f} ticks")
+    print(f"mean wait: {monitor.mean_wait:.2f} ticks")
+    print(
+        f"split edge/cloud: {split[ServerVariety.EDGE]} / "
+        f"{split[ServerVariety.CLOUD]} tasks"
+    )
+    print("utilization per server:")
+    for name, utilization in monitor.mean_utilization.items():
+        print(f"  {name}: {utilization:.0%}")
     print(f"makespan: tick {monitor.makespan}")
     return 0
 
