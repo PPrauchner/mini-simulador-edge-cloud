@@ -115,6 +115,30 @@ def test_same_seed_and_params_are_reproducible_via_cli() -> None:
     assert first.stdout == second.stdout
 
 
+def test_compare_prints_a_row_per_strategy_with_the_five_metrics() -> None:
+    result = run_cli("--compare")
+
+    assert result.returncode == 0
+    assert "AllCloud" in result.stdout
+    assert "EdgeFirst" in result.stdout
+    assert "LeastLoaded" in result.stdout
+    assert "response" in result.stdout
+    assert "wait" in result.stdout
+    assert "edge/cloud" in result.stdout
+    assert "util" in result.stdout
+    assert "makespan" in result.stdout
+
+
+def test_compare_is_reproducible_for_the_same_seed() -> None:
+    args = ("--compare", "--scenario", "high", "--seed", "5")
+
+    first = run_cli(*args)
+    second = run_cli(*args)
+
+    assert first.returncode == 0
+    assert first.stdout == second.stdout
+
+
 def test_tick_cap_overflow_reports_error_not_partial_metrics() -> None:
     result = run_cli("--ticks", "1")
 
