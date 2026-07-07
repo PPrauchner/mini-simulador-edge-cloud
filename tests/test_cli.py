@@ -39,6 +39,24 @@ def test_seed_and_ticks_flags_are_accepted() -> None:
     assert result.returncode == 0
 
 
+def test_strategy_edgefirst_runs_and_prints_metrics() -> None:
+    result = run_cli("--strategy", "edgefirst")
+
+    assert result.returncode == 0
+    assert "EdgeFirst" in result.stdout
+    assert "mean response time" in result.stdout
+    assert "makespan" in result.stdout
+
+
+def test_strategy_leastloaded_runs_and_prints_metrics() -> None:
+    result = run_cli("--strategy", "leastloaded")
+
+    assert result.returncode == 0
+    assert "LeastLoaded" in result.stdout
+    assert "mean response time" in result.stdout
+    assert "makespan" in result.stdout
+
+
 def test_tick_cap_overflow_reports_error_not_partial_metrics() -> None:
     result = run_cli("--ticks", "1")
 
