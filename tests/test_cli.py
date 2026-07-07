@@ -33,6 +33,17 @@ def test_python_m_sim_prints_metrics() -> None:
     assert "makespan" in result.stdout
 
 
+def test_python_m_sim_prints_all_five_canonical_metrics() -> None:
+    result = run_cli()
+
+    assert result.returncode == 0
+    assert "mean response time" in result.stdout
+    assert "mean wait" in result.stdout
+    assert "split" in result.stdout
+    assert "utilization" in result.stdout
+    assert "makespan" in result.stdout
+
+
 def test_seed_and_ticks_flags_are_accepted() -> None:
     result = run_cli("--seed", "42", "--ticks", "1000")
 
