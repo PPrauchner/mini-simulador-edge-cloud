@@ -2,9 +2,9 @@
 CLI entry point: `python -m sim`.
 
 Responsibilities:
-- Parse the CLI flags (--seed, --ticks, --strategy) with argparse, stdlib-only.
-- Run the minimal embedded Scenario under the chosen strategy and print
-  the metrics.
+- Parse the CLI flags (--scenario, --seed, --ticks, --strategy and the load
+  overrides) with argparse, stdlib-only.
+- Build the selected Scenario under the chosen strategy and print the metrics.
 """
 
 import argparse
@@ -12,7 +12,7 @@ import sys
 
 from sim.engine import TickLimitExceededError, run
 from sim.model import ServerVariety
-from sim.scenarios import minimal_scenario
+from sim.scenarios import SCENARIO_NAMES, make_scenario
 from sim.strategies import AllCloud, EdgeFirst, LeastLoaded, PlacementStrategy
 
 # Maps the --strategy CLI value to its display name and Placement Strategy.
@@ -21,6 +21,17 @@ STRATEGIES: dict[str, tuple[str, type[PlacementStrategy]]] = {
     "edgefirst": ("EdgeFirst", EdgeFirst),
     "leastloaded": ("LeastLoaded", LeastLoaded),
 }
+
+# LoadParams fields overridable from the CLI; each flag (e.g. --num-tasks)
+# lands on the identically named argparse attribute (args.num_tasks).
+LOAD_OVERRIDE_FIELDS: tuple[str, ...] = (
+    "num_tasks",
+    "arrival_window",
+    "duration_min",
+    "duration_max",
+    "demand_min",
+    "demand_max",
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -40,6 +51,12 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--scenario",
+        choices=SCENARIO_NAMES,
+        default="minimal",
+        help="scenario to run: fixed 'minimal' or a load preset (default: minimal)",
+    )
+    parser.add_argument(
         "--seed",
         type=int,
         default=0,
@@ -57,10 +74,27 @@ def main(argv: list[str] | None = None) -> int:
         default="allcloud",
         help="placement strategy to run (default: allcloud)",
     )
+    load = parser.add_argument_group(
+        "load parameters",
+        "override the selected load preset (ignored by 'minimal')",
+    )
+    load.add_argument("--num-tasks", type=int, help="number of Tasks to generate")
+    load.add_argument(
+        "--arrival-window", type=int, help="Tasks arrive in ticks [0, window]"
+    )
+    load.add_argument("--duration-min", type=int, help="smallest Task duration (ticks)")
+    load.add_argument("--duration-max", type=int, help="largest Task duration (ticks)")
+    load.add_argument("--demand-min", type=int, help="smallest Task demand (units)")
+    load.add_argument("--demand-max", type=int, help="largest Task demand (units)")
     args = parser.parse_args(argv)
 
     display_name, strategy_cls = STRATEGIES[args.strategy]
-    scenario = minimal_scenario(seed=args.seed)
+    overrides = {
+        field: getattr(args, field)
+        for field in LOAD_OVERRIDE_FIELDS
+        if getattr(args, field) is not None
+    }
+    scenario = make_scenario(args.scenario, seed=args.seed, overrides=overrides)
     try:
         monitor = run(scenario, strategy_cls(), max_ticks=args.ticks)
     except (TickLimitExceededError, ValueError) as error:
@@ -68,7 +102,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     split = monitor.split
-    print(f"scenario: minimal | strategy: {display_name}")
+    print(f"scenario: {args.scenario} | strategy: {display_name}")
     print(f"mean response time: {monitor.mean_response_time:.2f} ticks")
     print(f"mean wait: {monitor.mean_wait:.2f} ticks")
     print(
