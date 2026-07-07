@@ -68,6 +68,53 @@ def test_strategy_leastloaded_runs_and_prints_metrics() -> None:
     assert "makespan" in result.stdout
 
 
+def test_scenario_low_runs_and_prints_metrics() -> None:
+    result = run_cli("--scenario", "low")
+
+    assert result.returncode == 0
+    assert "scenario: low" in result.stdout
+    assert "mean wait" in result.stdout
+
+
+def test_scenario_high_runs_and_prints_metrics() -> None:
+    result = run_cli("--scenario", "high")
+
+    assert result.returncode == 0
+    assert "scenario: high" in result.stdout
+    assert "mean wait" in result.stdout
+
+
+def test_load_param_overrides_are_accepted() -> None:
+    result = run_cli(
+        "--scenario",
+        "high",
+        "--num-tasks",
+        "8",
+        "--duration-min",
+        "1",
+        "--duration-max",
+        "2",
+        "--demand-min",
+        "1",
+        "--demand-max",
+        "1",
+        "--arrival-window",
+        "20",
+    )
+
+    assert result.returncode == 0
+
+
+def test_same_seed_and_params_are_reproducible_via_cli() -> None:
+    args = ("--scenario", "high", "--seed", "5")
+
+    first = run_cli(*args)
+    second = run_cli(*args)
+
+    assert first.returncode == 0
+    assert first.stdout == second.stdout
+
+
 def test_tick_cap_overflow_reports_error_not_partial_metrics() -> None:
     result = run_cli("--ticks", "1")
 
