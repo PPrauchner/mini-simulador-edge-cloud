@@ -10,30 +10,24 @@ Responsibilities:
 
 import argparse
 import sys
+from dataclasses import fields
 
 from sim.engine import TickLimitExceededError, run
 from sim.model import Scenario, ServerVariety
 from sim.report import compare_table
-from sim.scenarios import SCENARIO_NAMES, make_scenario
+from sim.scenarios import SCENARIO_NAMES, LoadParams, make_scenario
 from sim.strategies import AllCloud, EdgeFirst, LeastLoaded, PlacementStrategy
 
-# Maps the --strategy CLI value to its display name and Placement Strategy.
-STRATEGIES: dict[str, tuple[str, type[PlacementStrategy]]] = {
-    "allcloud": ("AllCloud", AllCloud),
-    "edgefirst": ("EdgeFirst", EdgeFirst),
-    "leastloaded": ("LeastLoaded", LeastLoaded),
+# Maps the --strategy CLI value to its Placement Strategy.
+STRATEGIES: dict[str, type[PlacementStrategy]] = {
+    "allcloud": AllCloud,
+    "edgefirst": EdgeFirst,
+    "leastloaded": LeastLoaded,
 }
 
 # LoadParams fields overridable from the CLI; each flag (e.g. --num-tasks)
 # lands on the identically named argparse attribute (args.num_tasks).
-LOAD_OVERRIDE_FIELDS: tuple[str, ...] = (
-    "num_tasks",
-    "arrival_window",
-    "duration_min",
-    "duration_max",
-    "demand_min",
-    "demand_max",
-)
+LOAD_OVERRIDE_FIELDS: tuple[str, ...] = tuple(f.name for f in fields(LoadParams))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -109,8 +103,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.compare:
         try:
             results = [
-                (name, run(build_scenario(), strategy_cls(), max_ticks=args.ticks))
-                for name, strategy_cls in STRATEGIES.values()
+                (
+                    strategy_cls.__name__,
+                    run(build_scenario(), strategy_cls(), max_ticks=args.ticks),
+                )
+                for strategy_cls in STRATEGIES.values()
             ]
         except (TickLimitExceededError, ValueError) as error:
             print(f"error: {error}", file=sys.stderr)
@@ -119,7 +116,8 @@ def main(argv: list[str] | None = None) -> int:
         print(compare_table(results))
         return 0
 
-    display_name, strategy_cls = STRATEGIES[args.strategy]
+    strategy_cls = STRATEGIES[args.strategy]
+    display_name = strategy_cls.__name__
     try:
         monitor = run(build_scenario(), strategy_cls(), max_ticks=args.ticks)
     except (TickLimitExceededError, ValueError) as error:

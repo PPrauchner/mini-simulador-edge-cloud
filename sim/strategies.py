@@ -48,13 +48,16 @@ class GreedyStrategy(PlacementStrategy):
         """Chooses a Server for a single Task, or None to wait."""
 
 
+def _first_cloud(servers: list[Server]) -> Server | None:
+    """The first Cloud Server in the Scenario's declared order, or None."""
+    return next((s for s in servers if s.variety is ServerVariety.CLOUD), None)
+
+
 class AllCloud(GreedyStrategy):
     """Baseline strategy: every Task goes to the cloud."""
 
     def place_one(self, task: Task, servers: list[Server]) -> Server | None:
-        return next(
-            (s for s in servers if s.variety is ServerVariety.CLOUD), None
-        )
+        return _first_cloud(servers)
 
 
 class EdgeFirst(GreedyStrategy):
@@ -77,11 +80,7 @@ class EdgeFirst(GreedyStrategy):
             ),
             None,
         )
-        if local_edge is not None:
-            return local_edge
-        return next(
-            (s for s in servers if s.variety is ServerVariety.CLOUD), None
-        )
+        return local_edge if local_edge is not None else _first_cloud(servers)
 
 
 class LeastLoaded(GreedyStrategy):
