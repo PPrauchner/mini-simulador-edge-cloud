@@ -59,6 +59,16 @@ HIGH_LOAD = LoadParams(
 LOAD_PRESETS: dict[str, LoadParams] = {"low": LOW_LOAD, "high": HIGH_LOAD}
 
 
+def _edge_a_server() -> Server:
+    """The Edge Server shared by every embedded Scenario topology.
+
+    A fresh instance per call: Server.used is mutated in place by the
+    engine, so sharing one instance across Scenarios would leak occupancy
+    between runs.
+    """
+    return Server(name="edge-a", variety=ServerVariety.EDGE, capacity=2, site="edge-a")
+
+
 def minimal_scenario(seed: int = 0) -> Scenario:
     """Builds the minimal embedded Scenario: one edge, one cloud, four Tasks.
 
@@ -75,7 +85,7 @@ def minimal_scenario(seed: int = 0) -> Scenario:
     """
     return Scenario(
         servers=[
-            Server(name="edge-a", variety=ServerVariety.EDGE, capacity=2, site="edge-a"),
+            _edge_a_server(),
             Server(name="cloud", variety=ServerVariety.CLOUD, capacity=2),
         ],
         tasks=[
@@ -95,7 +105,7 @@ def _load_infrastructure() -> list[Server]:
     attributed to contention rather than to a different topology.
     """
     return [
-        Server(name="edge-a", variety=ServerVariety.EDGE, capacity=2, site="edge-a"),
+        _edge_a_server(),
         Server(name="cloud", variety=ServerVariety.CLOUD, capacity=4),
     ]
 

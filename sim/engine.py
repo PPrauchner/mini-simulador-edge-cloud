@@ -15,14 +15,17 @@ from sim.strategies import PlacementStrategy
 
 
 def _validate(scenario: Scenario) -> None:
-    """Fails fast on a Scenario that could never complete.
+    """Fails fast on a Scenario that could never complete or yield metrics.
 
     Args:
         scenario: Scenario to check before simulating.
 
     Raises:
-        ValueError: If a Task's demand exceeds the capacity of every Server.
+        ValueError: If the Scenario has no Tasks, or if a Task's demand
+            exceeds the capacity of every Server.
     """
+    if not scenario.tasks:
+        raise ValueError("scenario has no Tasks; nothing to simulate")
     max_capacity = max(server.capacity for server in scenario.servers)
     for task in scenario.tasks:
         if task.demand > max_capacity:
@@ -56,8 +59,9 @@ def run(
         The Monitor with the observed metrics of the complete run.
 
     Raises:
-        ValueError: If a Task's demand exceeds the capacity of every Server
-            (fail-fast, before simulating).
+        ValueError: If the Scenario has no Tasks, or if a Task's demand
+            exceeds the capacity of every Server (fail-fast, before
+            simulating).
         TickLimitExceededError: If max_ticks elapse before every Task is DONE.
     """
     _validate(scenario)

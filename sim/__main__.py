@@ -2,36 +2,32 @@
 CLI entry point: `python -m sim`.
 
 Responsibilities:
-- Parse the CLI flags (--scenario, --seed, --ticks, --strategy and the load
-  overrides) with argparse, stdlib-only.
-- Build the selected Scenario under the chosen strategy and print the metrics.
+- Parse the CLI flags (--scenario, --seed, --ticks, --strategy, --compare
+  and the load overrides) with argparse, stdlib-only.
+- Build the selected Scenario under the chosen strategy and print the metrics,
+  or under --compare run every strategy on the same load and print the table.
 """
 
 import argparse
 import sys
+from dataclasses import fields
 
 from sim.engine import TickLimitExceededError, run
-from sim.model import ServerVariety
-from sim.scenarios import SCENARIO_NAMES, make_scenario
+from sim.model import Scenario, ServerVariety
+from sim.report import compare_table
+from sim.scenarios import SCENARIO_NAMES, LoadParams, make_scenario
 from sim.strategies import AllCloud, EdgeFirst, LeastLoaded, PlacementStrategy
 
-# Maps the --strategy CLI value to its display name and Placement Strategy.
-STRATEGIES: dict[str, tuple[str, type[PlacementStrategy]]] = {
-    "allcloud": ("AllCloud", AllCloud),
-    "edgefirst": ("EdgeFirst", EdgeFirst),
-    "leastloaded": ("LeastLoaded", LeastLoaded),
+# Maps the --strategy CLI value to its Placement Strategy.
+STRATEGIES: dict[str, type[PlacementStrategy]] = {
+    "allcloud": AllCloud,
+    "edgefirst": EdgeFirst,
+    "leastloaded": LeastLoaded,
 }
 
 # LoadParams fields overridable from the CLI; each flag (e.g. --num-tasks)
 # lands on the identically named argparse attribute (args.num_tasks).
-LOAD_OVERRIDE_FIELDS: tuple[str, ...] = (
-    "num_tasks",
-    "arrival_window",
-    "duration_min",
-    "duration_max",
-    "demand_min",
-    "demand_max",
-)
+LOAD_OVERRIDE_FIELDS: tuple[str, ...] = tuple(f.name for f in fields(LoadParams))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -70,9 +66,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--strategy",
-        choices=sorted(STRATEGIES),
+        choices=list(STRATEGIES),
         default="allcloud",
         help="placement strategy to run (default: allcloud)",
+    )
+    parser.add_argument(
+        "--compare",
+        action="store_true",
+        help="run every strategy on the same scenario and print a table",
     )
     load = parser.add_argument_group(
         "load parameters",
@@ -88,15 +89,41 @@ def main(argv: list[str] | None = None) -> int:
     load.add_argument("--demand-max", type=int, help="largest Task demand (units)")
     args = parser.parse_args(argv)
 
-    display_name, strategy_cls = STRATEGIES[args.strategy]
     overrides = {
         field: getattr(args, field)
         for field in LOAD_OVERRIDE_FIELDS
         if getattr(args, field) is not None
     }
-    scenario = make_scenario(args.scenario, seed=args.seed, overrides=overrides)
+
+    def build_scenario() -> Scenario:
+        # Rebuilt per strategy: run() mutates the Scenario in place, so each
+        # strategy needs a fresh copy of the identical (same seed) load.
+        return make_scenario(args.scenario, seed=args.seed, overrides=overrides)
+
+    if args.compare:
+        results = []
+        try:
+            for strategy_cls in STRATEGIES.values():
+                name = strategy_cls.__name__
+                results.append(
+                    (name, run(build_scenario(), strategy_cls(), max_ticks=args.ticks))
+                )
+        except (TickLimitExceededError, ValueError) as error:
+            print(f"error: {name}: {error}", file=sys.stderr)
+            return 1
+        try:
+            table = compare_table(results)
+        except ValueError as error:
+            print(f"error: {error}", file=sys.stderr)
+            return 1
+        print(f"scenario: {args.scenario}")
+        print(table)
+        return 0
+
+    strategy_cls = STRATEGIES[args.strategy]
+    display_name = strategy_cls.__name__
     try:
-        monitor = run(scenario, strategy_cls(), max_ticks=args.ticks)
+        monitor = run(build_scenario(), strategy_cls(), max_ticks=args.ticks)
     except (TickLimitExceededError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
