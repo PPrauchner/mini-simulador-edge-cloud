@@ -61,7 +61,9 @@ def run(
         TickLimitExceededError: If max_ticks elapse before every Task is DONE.
     """
     _validate(scenario)
-    monitor = Monitor()
+    monitor = Monitor(
+        capacities={server.name: server.capacity for server in scenario.servers}
+    )
     pending: list[Task] = []
     running: list[tuple[Task, Server]] = []
 
@@ -99,6 +101,7 @@ def run(
                     latency=server.latency_from(task.origin),
                     duration=task.duration,
                     tick=tick,
+                    variety=server.variety,
                 )
 
         if all(t.state is TaskState.DONE for t in scenario.tasks):

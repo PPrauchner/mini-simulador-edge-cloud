@@ -55,3 +55,43 @@ class AllCloud(GreedyStrategy):
         return next(
             (s for s in servers if s.variety is ServerVariety.CLOUD), None
         )
+
+
+class EdgeFirst(GreedyStrategy):
+    """Prefers the local edge Server; falls back to the cloud.
+
+    Places the Task on the edge Server at its origin site when that edge
+    has slack; otherwise sends it to the cloud. Ties are broken by the
+    Scenario's declared Server order (the first matching Server wins),
+    which is stable and deterministic -- no randomness.
+    """
+
+    def place_one(self, task: Task, servers: list[Server]) -> Server | None:
+        local_edge = next(
+            (
+                s
+                for s in servers
+                if s.variety is ServerVariety.EDGE
+                and s.site == task.origin
+                and s.free_capacity >= task.demand
+            ),
+            None,
+        )
+        if local_edge is not None:
+            return local_edge
+        return next(
+            (s for s in servers if s.variety is ServerVariety.CLOUD), None
+        )
+
+
+class LeastLoaded(GreedyStrategy):
+    """Places the Task on the Server with the most free capacity.
+
+    Considers every Server -- the local edge, neighbor edges and the
+    cloud alike. Ties are broken by the Scenario's declared Server order
+    (the first Server reaching the maximum wins), which is stable and
+    deterministic -- no randomness.
+    """
+
+    def place_one(self, task: Task, servers: list[Server]) -> Server | None:
+        return max(servers, key=lambda s: s.free_capacity, default=None)
