@@ -66,7 +66,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--strategy",
-        choices=sorted(STRATEGIES),
+        choices=list(STRATEGIES),
         default="allcloud",
         help="placement strategy to run (default: allcloud)",
     )
@@ -101,19 +101,23 @@ def main(argv: list[str] | None = None) -> int:
         return make_scenario(args.scenario, seed=args.seed, overrides=overrides)
 
     if args.compare:
+        results = []
         try:
-            results = [
-                (
-                    strategy_cls.__name__,
-                    run(build_scenario(), strategy_cls(), max_ticks=args.ticks),
+            for strategy_cls in STRATEGIES.values():
+                name = strategy_cls.__name__
+                results.append(
+                    (name, run(build_scenario(), strategy_cls(), max_ticks=args.ticks))
                 )
-                for strategy_cls in STRATEGIES.values()
-            ]
         except (TickLimitExceededError, ValueError) as error:
+            print(f"error: {name}: {error}", file=sys.stderr)
+            return 1
+        try:
+            table = compare_table(results)
+        except ValueError as error:
             print(f"error: {error}", file=sys.stderr)
             return 1
         print(f"scenario: {args.scenario}")
-        print(compare_table(results))
+        print(table)
         return 0
 
     strategy_cls = STRATEGIES[args.strategy]

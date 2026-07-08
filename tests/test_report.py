@@ -7,6 +7,8 @@ Responsibilities:
 - Verify the presentation lives in the report module, fed by real runs.
 """
 
+import pytest
+
 from sim.engine import run
 from sim.monitor import Monitor
 from sim.report import compare_table
@@ -50,3 +52,16 @@ def test_compare_table_has_the_five_canonical_metric_columns() -> None:
     assert "edge/cloud" in header
     assert "util" in header
     assert "makespan" in header
+
+
+def test_compare_table_rejects_empty_results() -> None:
+    with pytest.raises(ValueError, match="at least one result"):
+        compare_table([])
+
+
+def test_compare_table_rejects_monitors_from_different_scenarios() -> None:
+    mismatched_monitor = run(make_scenario("minimal"), AllCloud())
+    mismatched_monitor.capacities = {**mismatched_monitor.capacities, "edge-b": 1}
+
+    with pytest.raises(ValueError, match="different Servers"):
+        compare_table([("A", _run_all()[0][1]), ("B", mismatched_monitor)])

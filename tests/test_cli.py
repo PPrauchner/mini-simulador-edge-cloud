@@ -139,6 +139,14 @@ def test_compare_is_reproducible_for_the_same_seed() -> None:
     assert first.stdout == second.stdout
 
 
+def test_compare_tick_cap_overflow_names_the_failing_strategy() -> None:
+    result = run_cli("--scenario", "high", "--ticks", "40", "--compare")
+
+    assert result.returncode != 0
+    assert "tick limit" in result.stderr
+    assert "AllCloud" in result.stderr
+
+
 def test_tick_cap_overflow_reports_error_not_partial_metrics() -> None:
     result = run_cli("--ticks", "1")
 

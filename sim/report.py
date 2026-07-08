@@ -23,8 +23,22 @@ def compare_table(results: list[tuple[str, Monitor]]) -> str:
 
     Returns:
         The rendered table as a single multi-line string, header first.
+
+    Raises:
+        ValueError: If results is empty, or if the Monitors did not run
+            over the same Scenario (their Servers differ).
     """
+    if not results:
+        raise ValueError("compare_table requires at least one result")
     server_names = list(results[0][1].capacities)
+    for name, monitor in results:
+        if list(monitor.capacities) != server_names:
+            raise ValueError(
+                f"{name}'s Monitor ran over different Servers than "
+                f"{results[0][0]}'s; compare_table requires every "
+                "strategy to run over the same Scenario"
+            )
+
     headers = ["strategy", "response", "wait", "edge/cloud"]
     headers += [f"util:{name}" for name in server_names]
     headers += ["makespan"]
