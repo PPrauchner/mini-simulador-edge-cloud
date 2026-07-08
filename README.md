@@ -15,8 +15,10 @@ Makespan, Utilization, Scenario, Placement Strategy) está definido em
 - **Python 3.10+**. Só isso.
 - **Nenhuma dependência externa** para rodar: o núcleo usa apenas a biblioteca
   padrão (`argparse`, `dataclasses`, `random`, `statistics`). Não há `pip install`.
-- **`matplotlib` é dependência opcional**, usada só pela flag `--chart`
-  (`pip install matplotlib`). Sem `--chart`, nada a importa e o núcleo roda sem ela.
+- **`matplotlib` é dependência opcional**, usada só pela flag `--chart`. Está
+  declarada como o *extra* `chart` no `pyproject.toml`; instale com
+  `uv pip install ".[chart]"` (ou `pip install ".[chart]"`). Sem `--chart`, nada a
+  importa e o núcleo roda sem ela.
 
 ## Como rodar
 
