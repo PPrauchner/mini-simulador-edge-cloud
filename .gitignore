@@ -1,3 +1,6 @@
 bolsa.jpeg
 transcricao_audios.md
 .claude/current-issue
+.pytest_cache/
+__pycache__/
+charts/
