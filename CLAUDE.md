@@ -48,7 +48,7 @@ Detalhe de cada flag (`--scenario`, `--seed`, `--strategy`, `--compare`,
 - **Python 3.10+**, type hints nativos (`X | None`, `list[int]`).
 - **Núcleo sem dependências externas**: apenas a biblioteca padrão. `python -m sim`
   roda sem instalar nada. `matplotlib` é a única dependência opcional (flag
-  `--chart`, ainda por implementar).
+  `--chart`).
 - **Interface só CLI** (`python -m sim`) — sem web, sem GUI.
 - **Simulação em tempo discreto** (baseada em Ticks); síncrona, um Scenario por vez.
   Sem fila de mensagens / assíncrono. Não confundir com a **fila de espera** de Tasks

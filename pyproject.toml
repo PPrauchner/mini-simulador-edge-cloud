@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mini-simulador-edge-cloud"
+version = "0.1.0"
+description = "Simulador em tempo discreto de alocação de Tasks em Edge-Cloud."
+readme = "README.md"
+requires-python = ">=3.10"
+# Núcleo sem dependências externas: `python -m sim` roda só com a stdlib.
+dependencies = []
+
+# matplotlib é dependência opcional, usada apenas pela flag `--chart`.
+# Instale com: uv pip install ".[chart]"  (ou: pip install ".[chart]")
+[project.optional-dependencies]
+chart = ["matplotlib"]
+
+[tool.setuptools]
+packages = ["sim"]

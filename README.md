@@ -15,6 +15,10 @@ Makespan, Utilization, Scenario, Placement Strategy) está definido em
 - **Python 3.10+**. Só isso.
 - **Nenhuma dependência externa** para rodar: o núcleo usa apenas a biblioteca
   padrão (`argparse`, `dataclasses`, `random`, `statistics`). Não há `pip install`.
+- **`matplotlib` é dependência opcional**, usada só pela flag `--chart`. Está
+  declarada como o *extra* `chart` no `pyproject.toml`; instale com
+  `uv pip install ".[chart]"` (ou `pip install ".[chart]"`). Sem `--chart`, nada a
+  importa e o núcleo roda sem ela.
 
 ## Como rodar
 
@@ -47,6 +51,7 @@ makespan: tick 3
 | `--strategy` | `allcloud`, `edgefirst`, `leastloaded` | `allcloud` | Placement Strategy a rodar (quando **não** se usa `--compare`). |
 | `--compare` | — (flag) | desligada | Roda **todas** as estratégias sobre o mesmo Scenario/seed e imprime a tabela comparativa. Ignora `--strategy`. |
 | `--ticks` | inteiro | `10000` | Teto de segurança de ticks simulados; a simulação aborta com erro se ultrapassar. |
+| `--chart` | caminho (PNG) | desligada | Salva um gráfico da execução: ocupação por Server ao longo dos Ticks (execução única) ou barras de response/wait/makespan por estratégia (com `--compare`). Um caminho relativo é gravado na pasta `charts/` (criada sob demanda e **fora do versionamento**, no `.gitignore`); um caminho absoluto é respeitado como está. Requer `matplotlib`. |
 
 **Parâmetros de carga** (sobrescrevem o preset selecionado; ignorados por
 `minimal`, que tem carga fixa):
@@ -74,6 +79,13 @@ python -m sim --scenario high --seed 1 --compare
 
 # Ajustar o preset: mesma infra, 30 Tasks em vez das 24 padrão
 python -m sim --scenario high --num-tasks 30 --compare
+
+# Salvar um gráfico (requer matplotlib): ocupação por Server ao longo dos Ticks.
+# O caminho relativo cai em charts/ (fora do versionamento) -> charts/ocupacao.png
+python -m sim --scenario high --chart ocupacao.png
+
+# Com --compare, o gráfico vira as barras de métricas por estratégia
+python -m sim --scenario high --compare --chart comparacao.png
 ```
 
 ### As métricas impressas
