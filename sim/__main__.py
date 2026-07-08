@@ -9,9 +9,12 @@ Responsibilities:
 """
 
 import argparse
+import os
 import sys
+from collections.abc import Callable
 from dataclasses import fields
 
+from sim.chart import ChartDependencyError, render_comparison, render_occupancy
 from sim.engine import TickLimitExceededError, run
 from sim.model import Scenario, ServerVariety
 from sim.report import compare_table
@@ -28,6 +31,43 @@ STRATEGIES: dict[str, type[PlacementStrategy]] = {
 # LoadParams fields overridable from the CLI; each flag (e.g. --num-tasks)
 # lands on the identically named argparse attribute (args.num_tasks).
 LOAD_OVERRIDE_FIELDS: tuple[str, ...] = tuple(f.name for f in fields(LoadParams))
+
+# Non-versioned home for the --chart PNGs (git-ignored); a relative --chart
+# path lands here, keeping generated images out of the repository.
+CHART_DIR = "charts"
+
+
+def _resolve_chart_path(path: str) -> str:
+    """Places a relative --chart path under the non-versioned charts/ dir.
+
+    Args:
+        path: The --chart value as given on the CLI.
+
+    Returns:
+        The path unchanged if absolute; otherwise joined under CHART_DIR.
+    """
+    if os.path.isabs(path):
+        return path
+    return os.path.join(CHART_DIR, path)
+
+
+def _save_chart(render: Callable[[], None], path: str) -> bool:
+    """Renders a chart to disk, reporting a clear error if matplotlib is absent.
+
+    Args:
+        render: Zero-argument call that renders the chart to `path`.
+        path: Destination path, echoed on success.
+
+    Returns:
+        True if the chart was saved; False if matplotlib is not installed.
+    """
+    try:
+        render()
+    except ChartDependencyError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return False
+    print(f"chart saved to {path}")
+    return True
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -75,6 +115,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="run every strategy on the same scenario and print a table",
     )
+    parser.add_argument(
+        "--chart",
+        metavar="PATH",
+        help="save a chart of the run to PATH as PNG (requires matplotlib)",
+    )
     load = parser.add_argument_group(
         "load parameters",
         "override the selected load preset (ignored by 'minimal')",
@@ -94,6 +139,8 @@ def main(argv: list[str] | None = None) -> int:
         for field in LOAD_OVERRIDE_FIELDS
         if getattr(args, field) is not None
     }
+
+    chart_path = _resolve_chart_path(args.chart) if args.chart else None
 
     def build_scenario() -> Scenario:
         # Rebuilt per strategy: run() mutates the Scenario in place, so each
@@ -118,6 +165,10 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(f"scenario: {args.scenario}")
         print(table)
+        if chart_path and not _save_chart(
+            lambda: render_comparison(results, chart_path), chart_path
+        ):
+            return 1
         return 0
 
     strategy_cls = STRATEGIES[args.strategy]
@@ -140,6 +191,10 @@ def main(argv: list[str] | None = None) -> int:
     for name, utilization in monitor.mean_utilization.items():
         print(f"  {name}: {utilization:.0%}")
     print(f"makespan: tick {monitor.makespan}")
+    if chart_path and not _save_chart(
+        lambda: render_occupancy(monitor, chart_path), chart_path
+    ):
+        return 1
     return 0
 
 
